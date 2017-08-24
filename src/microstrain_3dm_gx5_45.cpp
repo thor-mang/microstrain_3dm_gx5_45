@@ -845,17 +845,23 @@ namespace Microstrain
 
 		    //For little-endian targets, byteswap the data field
 		    mip_ahrs_quaternion_byteswap(&curr_ahrs_quaternion_);
-		    // put into ENU - swap X/Y, invert Z
+//		     put into ENU - swap X/Y, invert Z
 //        imu_msg_.orientation.x = curr_ahrs_quaternion_.q[2];
 //        imu_msg_.orientation.y = curr_ahrs_quaternion_.q[1];
 //        imu_msg_.orientation.z = -1.0*curr_ahrs_quaternion_.q[3];
 //        imu_msg_.orientation.w = curr_ahrs_quaternion_.q[0];
 
-        // world -> imu in NED
-        imu_msg_.orientation.x = curr_ahrs_quaternion_.q[1];
-        imu_msg_.orientation.y = curr_ahrs_quaternion_.q[2];
-        imu_msg_.orientation.z = curr_ahrs_quaternion_.q[3];
-        imu_msg_.orientation.w = curr_ahrs_quaternion_.q[0];
+        // Rotate data to match ENU convention
+        tf::Quaternion quat(curr_ahrs_quaternion_.q[1], curr_ahrs_quaternion_.q[2], curr_ahrs_quaternion_.q[3], curr_ahrs_quaternion_.q[0]);
+        tf::Quaternion rotX = tf::createQuaternionFromRPY(M_PI, 0, 0);
+        tf::Quaternion rotZ = tf::createQuaternionFromRPY(0, 0, -M_PI/2);
+        tf::Quaternion quat_rotated = rotX * rotZ * quat;
+
+        // Write transform from world to imu in ENU
+        imu_msg_.orientation.x = quat_rotated.x();
+        imu_msg_.orientation.y = quat_rotated.y();
+        imu_msg_.orientation.z = quat_rotated.z();
+        imu_msg_.orientation.w = quat_rotated.w();
 
 		  }break;
 
